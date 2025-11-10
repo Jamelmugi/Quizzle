@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jam Quiz 🔒</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #ffccf9, #b5deff);
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 320px;
+    }
+    h2 { margin-bottom: 8px; color: #444; }
+    .clue {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 12px;
+      font-style: italic;
+    }
+    .clue strong { color: #333; }
+    input {
+      padding: 10px;
+      width: 80%;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      outline: none;
+      text-align: center;
+      font-size: 16px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border: none;
+      background: #6aa84f;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover { background: #4f9440; }
+    p#error {
+      margin-top: 12px;
+      color: #c0392b;
+      display: none;
+    }
+    p#smallhint {
+      margin-top: 10px;
+      color: #2c3e50;
+      font-size: 13px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Passwort eingeben:</h2>
+
+    <!-- CLUE: sichtbar für Enny -->
+    <p class="clue">Clue: <strong>Jamel hat die ... Freundin</strong></p>
+
+    <input type="password" id="password" placeholder="Passwort hier" />
+    <br>
+    <button onclick="checkPassword()">Bestätigen</button>
+
+    <p id="error">Falsches Passwort 😏</p>
+    <p id="smallhint">Tipp: Denk an das Wort, das in die Lücke passt.</p>
+  </div>
+
+  <script>
+    // optional: nach 2 Fehlversuchen einen kleinen extra Hinweis einblenden
+    let wrongTries = 0;
+
+    function checkPassword() {
+      const pass = document.getElementById("password").value.toLowerCase().trim();
+      const error = document.getElementById("error");
+      const smallhint = document.getElementById("smallhint");
+
+      if (pass === "beste") {
+        // Weiter zur Quizseite
+        window.location.href = "quiz.html";
+      } else {
+        // falsches Passwort -> zeige Fehler und ggf. kleinen Tipp
+        error.style.display = "block";
+        wrongTries++;
+        if (wrongTries >= 2) {
+          smallhint.style.display = "block";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
