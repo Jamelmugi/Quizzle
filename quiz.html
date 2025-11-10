@@ -164,18 +164,46 @@ function playSuccess(){
   sound.play();
 }
 
-function playVideoFullscreen(src, callback){
-  const overlay = document.getElementById("videoOverlay");
-  const vid = document.getElementById("overlayVideo");
-  overlay.style.display = "flex";
-  vid.src = src;
-  vid.play();
-  vid.onended = () => {
-    overlay.style.display = "none";
-    vid.src = "";
-    if(callback) callback();
+<script>
+function playVideo(videoFile, callback) {
+  // Video-Container erstellen
+  const videoContainer = document.createElement("div");
+  videoContainer.style.position = "fixed";
+  videoContainer.style.top = "0";
+  videoContainer.style.left = "0";
+  videoContainer.style.width = "100vw";
+  videoContainer.style.height = "100vh";
+  videoContainer.style.backgroundColor = "black";
+  videoContainer.style.display = "flex";
+  videoContainer.style.justifyContent = "center";
+  videoContainer.style.alignItems = "center";
+  videoContainer.style.zIndex = "9999";
+
+  // Video-Element
+  const video = document.createElement("video");
+  video.src = "assets/" + videoFile;
+  video.style.maxWidth = "100%";
+  video.style.maxHeight = "100%";
+  video.autoplay = true;
+  video.controls = false;
+  video.playsInline = true; // wichtig für iPhone
+  video.onended = () => {
+    document.body.removeChild(videoContainer);
+    if (callback) callback();
   };
+
+  videoContainer.appendChild(video);
+  document.body.appendChild(videoContainer);
+
+  // Falls Autoplay blockiert -> Klick erlaubt starten
+  video.play().catch(() => {
+    videoContainer.addEventListener("click", () => {
+      video.play();
+    });
+  });
 }
+</script>
+
 
 function nextQuestion(){
   current++;
@@ -191,3 +219,4 @@ showQuestion();
 </script>
 </body>
 </html>
+
