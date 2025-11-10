@@ -1,41 +1,76 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Jam Quiz 🎄</title>
 <style>
-  body { font-family: 'Poppins', sans-serif; background: #ffe4e1; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
-  .container { background:white; padding:30px; border-radius:20px; box-shadow:0 4px 20px rgba(0,0,0,0.2); width:400px; text-align:center; z-index:1; position:relative;}
-  h2 { color:#444; margin-bottom:20px; }
-  button { margin:5px; padding:10px 20px; border:none; border-radius:10px; cursor:pointer; font-size:16px; }
-  button:hover { opacity:0.8; }
-  input { padding:10px; width:80%; border:2px solid #ccc; border-radius:10px; text-align:center; font-size:16px; }
-  #feedback { margin-top:15px; color:red; display:none; }
-  img { max-width:100%; margin-top:15px; border-radius:15px; }
-  #videoOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; justify-content:center; align-items:center; z-index:9999; }
-  #videoOverlay video { max-width:90%; max-height:90%; border-radius:10px; }
+  :root{--card-width:420px}
+  html,body{height:100%;margin:0}
+  body{
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg,#ffeef0 0%, #ffe4e1 100%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .container{
+    width:var(--card-width);
+    background:#fff;
+    border-radius:16px;
+    padding:26px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.12);
+    text-align:center;
+    position:relative;
+  }
+  h2{color:#222;margin:0 0 16px;font-size:20px}
+  #answers{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+  button.opt{
+    padding:10px 16px;border-radius:10px;border:0;cursor:pointer;font-size:15px;
+    background:#f0f0f0;
+  }
+  button.opt:hover{transform:translateY(-2px)}
+  input[type="text"]{padding:10px;width:86%;border-radius:10px;border:2px solid #ddd;text-align:center;font-size:15px}
+  #submitBtn{margin-top:12px;padding:10px 18px;border-radius:10px;border:0;background:#4caf50;color:#fff;cursor:pointer}
+  #failImg{max-width:100%;margin-top:14px;border-radius:12px;display:none}
+  #feedback{margin-top:10px;color:#c0392b;display:none}
+  /* Fullscreen video overlay */
+  #videoOverlay{
+    display:none;
+    position:fixed;inset:0;
+    background:#000;align-items:center;justify-content:center;z-index:9999;
+  }
+  #videoOverlay video{max-width:98%;max-height:98%;border-radius:8px}
+  /* final screen */
+  .final{
+    padding:26px;
+  }
+  .btn-link{display:inline-block;margin-top:12px;padding:10px 16px;border-radius:10px;background:#4f9440;color:#fff;text-decoration:none}
 </style>
 </head>
 <body>
+  <div class="container" id="quizCard">
+    <h2 id="question">Lädt…</h2>
+    <div id="answers"></div>
 
-<div class="container">
-  <h2 id="question">Frage erscheint hier</h2>
-  <div id="answers"></div>
-  <input type="text" id="textAnswer" style="display:none;" placeholder="Deine Antwort hier">
-  <button id="submitBtn" style="display:none;" onclick="checkTextAnswer()">Bestätigen</button>
-  <div id="feedback"></div>
+    <div id="textArea" style="margin-top:10px; display:none;">
+      <input type="text" id="textAnswer" placeholder="Deine Antwort hier" autocomplete="off">
+      <div><button id="submitBtn" onclick="checkTextAnswer()">Bestätigen</button></div>
+    </div>
 
-  <img id="failImg" src="assets/fail.jpg" style="display:none;">
+    <div id="feedback"></div>
+    <img id="failImg" src="assets/fail.jpg" alt="Fail" />
+  </div>
+
+  <!-- Fullscreen overlay für Videos -->
+  <div id="videoOverlay">
+    <video id="overlayVideo" playsinline></video>
+  </div>
+
+  <!-- Sounds -->
   <audio id="failSound" src="assets/fail.mp3"></audio>
   <audio id="successSound" src="assets/yes.mp3"></audio>
-</div>
-
-<div id="videoOverlay">
-  <video id="overlayVideo" controls></video>
-</div>
 
 <script>
+/* ====== Fragen ====== */
 const questions = [
   {q:"Wer ist Jamels Mama?", type:"mc", options:["Kerstin","Anna","Maria","Lisa"], correct:["Kerstin"]},
   {q:"Welches Essen verträgt Jamel mega?", type:"mc", options:["Banane","Avocado","Pizza","Burger"], correct:["Banane","Avocado"]},
@@ -52,54 +87,63 @@ const questions = [
 let current = 0;
 let multiCorrect = [];
 
-// shuffle Funktion für Randomisierung
-function shuffle(array){
-  for(let i = array.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+/* ====== Utility: shuffle ====== */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
   }
-  return array;
+  return a;
 }
 
+/* ====== Anzeige der Frage ====== */
 function showQuestion(){
-  document.getElementById("feedback").style.display="none";
-  document.getElementById("failImg").style.display="none";
+  hideFeedback();
+  hideFailImg();
 
   const q = questions[current];
-  document.getElementById("question").innerText = q.q;
-  const answersDiv = document.getElementById("answers");
-  answersDiv.innerHTML = "";
-  document.getElementById("textAnswer").style.display="none";
-  document.getElementById("submitBtn").style.display="none";
+  document.getElementById('question').innerText = q.q;
+  const answersDiv = document.getElementById('answers');
+  answersDiv.innerHTML = '';
+  document.getElementById('textArea').style.display = 'none';
+  document.getElementById('textAnswer').value = '';
 
-  if(q.type==="mc"){
-    let opts = shuffle([...q.options]);
+  if(q.type === 'mc'){
+    const opts = shuffle([...q.options]);
     opts.forEach(opt=>{
-      const btn = document.createElement("button");
+      const btn = document.createElement('button');
+      btn.className = 'opt';
       btn.innerText = opt;
-      btn.onclick = () => checkMC(opt);
+      btn.onclick = ()=> checkMC(opt);
       answersDiv.appendChild(btn);
     });
-  } else if(q.type==="text"){
-    document.getElementById("textAnswer").style.display="block";
-    document.getElementById("submitBtn").style.display="block";
-  } else if(q.type==="multi"){
-    let opts = shuffle([...q.options]);
+  } else if(q.type === 'text'){
+    document.getElementById('textArea').style.display = 'block';
+  } else if(q.type === 'multi'){
+    const opts = shuffle([...q.options]);
     opts.forEach(opt=>{
-      const btn = document.createElement("button");
+      const btn = document.createElement('button');
+      btn.className = 'opt';
       btn.innerText = opt;
-      btn.onclick = () => checkMulti(opt, btn);
+      btn.onclick = ()=> checkMulti(opt, btn);
       answersDiv.appendChild(btn);
     });
   }
 }
 
+/* ====== Prüf-Funktionen ====== */
 function checkMC(opt){
   const q = questions[current];
   if(q.correct.includes(opt)){
     playSuccess();
-    if(q.q.includes("Bombo")) { 
-      playVideoFullscreen("assets/bombo.mp4", nextQuestion);
+    // spezieller fall: Bombo -> fullscreen video -> weiter danach
+    if(q.q.toLowerCase().includes('bombo')){
+      hideQuizCard();
+      playVideoFullscreen('assets/bombo.mp4', ()=>{
+        showQuizCard();
+        nextQuestion();
+      });
       return;
     }
     nextQuestion();
@@ -110,113 +154,128 @@ function checkMC(opt){
 
 function checkTextAnswer(){
   const q = questions[current];
-  const val = document.getElementById("textAnswer").value.toLowerCase().trim();
-  
+  const val = document.getElementById('textAnswer').value.toLowerCase().trim();
   if(val === q.correct.toLowerCase()){
     playSuccess();
-
-    if(q.q.includes("Lieblingswort")) { 
-      // Quiz ausblenden
-      document.querySelector(".container").style.display = "none";
-
-      // Fullscreen Video abspielen
-      playVideoFullscreen("assets/justcant.mp4", () => {
-        // Nach Video Quiz wieder anzeigen und nächste Frage
-        document.querySelector(".container").style.display = "block";
+    // spezieller fall: Lieblingswort -> Justcant.mp4 fullscreen
+    if(q.q.toLowerCase().includes('lieblingswort')){
+      hideQuizCard();
+      playVideoFullscreen('assets/Justcant.mp4', ()=>{
+        showQuizCard();
         nextQuestion();
       });
       return;
     }
-
-    setTimeout(nextQuestion, 500);
+    setTimeout(nextQuestion, 300);
   } else {
     showFail();
   }
 }
 
-
 function checkMulti(opt, btn){
   const q = questions[current];
   if(q.correct.includes(opt)){
-    btn.style.background="green";
+    btn.style.background = '#86e07c';
     if(!multiCorrect.includes(opt)) multiCorrect.push(opt);
     if(multiCorrect.length === q.correct.length){
       multiCorrect = [];
       playSuccess();
-      nextQuestion();
+      setTimeout(nextQuestion, 300);
     }
   } else {
     showFail();
   }
 }
 
+/* ====== Feedback Funktionen ====== */
 function showFail(){
-  const img = document.getElementById("failImg");
-  const sound = document.getElementById("failSound");
-  img.style.display="block";
-  sound.currentTime=0;
-  sound.play();
+  const img = document.getElementById('failImg');
+  const s = document.getElementById('failSound');
+  img.style.display = 'block';
+  try{ s.currentTime = 0; s.play(); }catch(e){}
+  // kleines visuelles Feedback entfernen nach 1.8s
+  setTimeout(()=>{ img.style.display = 'none'; }, 1800);
 }
+function hideFailImg(){ document.getElementById('failImg').style.display = 'none'; }
+function hideFeedback(){ document.getElementById('feedback').style.display = 'none'; }
 
+/* ====== Sounds ====== */
 function playSuccess(){
-  const sound = document.getElementById("successSound");
-  sound.currentTime=0;
-  sound.play();
+  const s = document.getElementById('successSound');
+  try{ s.currentTime = 0; s.play(); }catch(e){}
 }
 
-<script>
-function playVideo(videoFile, callback) {
-  // Video-Container erstellen
-  const videoContainer = document.createElement("div");
-  videoContainer.style.position = "fixed";
-  videoContainer.style.top = "0";
-  videoContainer.style.left = "0";
-  videoContainer.style.width = "100vw";
-  videoContainer.style.height = "100vh";
-  videoContainer.style.backgroundColor = "black";
-  videoContainer.style.display = "flex";
-  videoContainer.style.justifyContent = "center";
-  videoContainer.style.alignItems = "center";
-  videoContainer.style.zIndex = "9999";
+/* ====== Fullscreen Video Overlay ====== */
+function playVideoFullscreen(src, callback){
+  const overlay = document.getElementById('videoOverlay');
+  const vid = document.getElementById('overlayVideo');
 
-  // Video-Element
-  const video = document.createElement("video");
-  video.src = "assets/" + videoFile;
-  video.style.maxWidth = "100%";
-  video.style.maxHeight = "100%";
-  video.autoplay = true;
-  video.controls = false;
-  video.playsInline = true; // wichtig für iPhone
-  video.onended = () => {
-    document.body.removeChild(videoContainer);
-    if (callback) callback();
+  // set up
+  vid.pause();
+  vid.src = src;
+  vid.controls = false;
+  vid.playsInline = true;
+  overlay.style.display = 'flex';
+
+  // Try to play; if blocked, the user can tap the overlay to start
+  const playPromise = vid.play();
+  const onEnded = ()=>{
+    vid.removeEventListener('ended', onEnded);
+    overlay.style.display = 'none';
+    vid.src = '';
+    if(callback) callback();
   };
+  vid.addEventListener('ended', onEnded);
 
-  videoContainer.appendChild(video);
-  document.body.appendChild(videoContainer);
-
-  // Falls Autoplay blockiert -> Klick erlaubt starten
-  video.play().catch(() => {
-    videoContainer.addEventListener("click", () => {
-      video.play();
+  if(playPromise !== undefined){
+    playPromise.catch(()=> {
+      // Autoplay blocked -> let user tap to start
+      overlay.addEventListener('click', function listener(){
+        overlay.removeEventListener('click', listener);
+        vid.play().catch(()=>{ /* ignore */ });
+      });
     });
-  });
+  }
 }
-</script>
 
+/* ====== Show/Hide quiz card during videos ====== */
+function hideQuizCard(){ document.getElementById('quizCard').style.display = 'none'; }
+function showQuizCard(){ document.getElementById('quizCard').style.display = 'block'; }
 
+/* ====== Weiter / Ende ====== */
 function nextQuestion(){
   current++;
   if(current < questions.length){
     showQuestion();
   } else {
-    document.querySelector(".container").innerHTML = "<h2>🎉 Du hast das Quiz abgeschlossen! 🎉</h2>";
+    showFinalScreen();
   }
 }
 
-// Start
-showQuestion();
+function showFinalScreen(){
+  const root = document.getElementById('quizCard');
+  root.innerHTML = `
+    <div class="final">
+      <h2>🎉 Du hast das Quiz geschafft, Enny ❤️</h2>
+      <p>Gut gemacht — danke fürs Mitmachen!</p>
+      <a class="btn-link" href="index.html">Zurück zur Startseite</a>
+    </div>
+  `;
+}
+
+/* ====== Init ====== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // kleine precaution: ensure overlay exists and is clickable on mobile
+  const overlay = document.getElementById('videoOverlay');
+  overlay.addEventListener('click', ()=> {
+    // if video paused because autoplay blocked, clicking the overlay tries to play
+    const vid = document.getElementById('overlayVideo');
+    if(vid.paused) vid.play().catch(()=>{});
+  });
+  showQuestion();
+});
 </script>
 </body>
 </html>
+
 
